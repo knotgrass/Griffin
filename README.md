@@ -8,7 +8,9 @@ All our models contain the following components: (i) a residual block, (ii) an M
 
 The residual block, as shown in Figure 2(a), defines the global structure of our models and is inspired by pre-norm Transformers (Xiong et al., 2020). After embedding the input sequence we pass it through $N$ such blocks ($N$ denoting the model depth), and then we apply RMSNorm [Zhang and Sennrich, 2019](https://arxiv.org/abs/1910.07467) to produce the final activations. To compute the token probabilities we apply a final linear layer followed by a softmax. The weights of this layer are shared with the input embedding layer.
 ## Residual block
+
 ![Griffin](https://arxiv.org/html/2402.19427v1/x3.png)
+
 Figure 2: a) The main backbone of our mode architecture is the residual block, which is stacked $N$ times. b) The gated MLP block that we use. c) The recurrent block that we propose as an alternative to Multi Query Attention (MQA). It uses our proposed RG-LRU layer, defined in Section 2.4.
 
 The residual block contains two components, applied in order. The first component takes the hidden state $\chi$ and applies an RMSNorm [Zhang and Sennrich, 2019](https://arxiv.org/abs/1910.07467), followed by the temporal-mixing block. We then merge the output with a skip connection from $\chi$ through addition. Similarly, the second component applies RMSNorm, followed by the MLP block and then merges its output with a skip connection from the input of the RMSNorm. This block is illustrated in Figure 2 (a).

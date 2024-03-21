@@ -35,14 +35,13 @@ Our recurrent block (Figure 2(c)) is similar to the GSS block (Mehta et al., 202
 
 ## Real-Gated Linear Recurrent Unit (RG-LRU)
 Our proposed RG-LRU layer has a simple recurrence inspired by the Linear Recurrent Unit (LRU) [Orvieto et al., 2023b](https://arxiv.org/abs/2303.06349), but incorporates a gating mechanism motivated by the literature on non-linear RNNs, in particular LSTMs [Hochreiter and Schmidhuber, 1997](https://direct.mit.edu/neco/article-abstract/9/8/1735/6109/Long-Short-Term-Memory?redirectedFrom=fulltext) and GRUs [Chung et al., 2014](https://arxiv.org/abs/1412.3555). The equations describing the layer are as follows:
-```math
-\begin{align}
+
+$$\begin{align}
 r_t &= \sigma(W_{a} x_t + b_a), & \text{recurrence gate} \\
 i_t &= \sigma(W_{x} x_t + b_x), & \text{input gate} \\
 a_t &= a^{cr_t}, & \text{} \\
 h_t &= a_t \odot h_{t-1} + \sqrt{1 - a_t^2} \odot (i_t \odot x_t). & \text{}
-\end{align}
-```
+\end{align}$$
 
 The output of the layer is $y_t=h_t$, and the non-linearity $\sigma$ in the equations is the sigmoid function. The recurrent weight $a$ in Equation (4) is diagonal. Hence all operations are element-wise. We parameterize $a$ in Equation (3) as $a=\sigma(\Lambda)$, where $\Lambda$ is a learnable parameter. This guarantees that $0 <= a <= 1$, ensuring that the recurrence is stable. The variable $c$ is a scalar-valued constant set to 8. For numerical stability, in practice we compute $a^{cr_t}$ in log-space (see Appendix A). The layer has gates on both the input $x$ and the recurrent weight $a$. However, neither gate depends on the recurrent state $h_{t-1}$, which ensures that the computation can be executed efficiently on device. We initialize both $W_{a}$ and $W_{b}$ using LeCun init [LeCun et al., 2002](https://cseweb.ucsd.edu/classes/wi08/cse253/Handouts/lecun-98b.pdf). We initialize $\Lambda$ such that $a^c$ is uniformly distributed between $0.9$ and $0.999$ at the start of training, similar to ([Orvieto et al., 2023b](https://arxiv.org/abs/2303.06349).). Unlike many recent works in the SSM literature, the RG-LRU does not use initialization inspired by the theory of orthogonal polynomials [Gu et al., 2020](https://proceedings.neurips.cc/paper/2020/hash/102f0bb6efb3a6128a3c750dd16729be-Abstract.html), and it also is not defined as the discretization of an underlying continuous system [Gu et al., 2021a](https://arxiv.org/abs/2111.00396). Unlike the original LRU layer, we do not use complex algebra in the recurrence. While using complex recurrences would lead to a more expressive layer [Orvieto et al., 2023a](https://arxiv.org/abs/2307.11888) we found that complex recurrences were not beneficial for language modelling in practice, as also observed by [Gu and Dao, 2023](https://arxiv.org/abs/2312.00752). (see Appendix B)
 

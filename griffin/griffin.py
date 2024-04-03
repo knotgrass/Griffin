@@ -1,3 +1,4 @@
+from jaxtyping import Array, Float32
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
@@ -40,12 +41,61 @@ class Temporal_Conv1D(nn.Module):
 
 
 class Real_Gated_Linear_Recurrent_Unit(nn.Module):
-    #TODO   
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    c = 8.0
 
-    def forward(self, x:Tensor) -> Tensor:
-        return
+    def __init__(self, dim:int, expansion_factor:int|float=3,
+                 device=None, dtype=None):
+        factory_kwargs = {'device': device, 'dtype': dtype}
+        super().__init__()
+
+        self.dtype = dtype
+        self.device = device
+        self.input_dim = dim
+        self.hidden_dim = int(round(dim * expansion_factor))
+
+        self.Wa = nn.Parameter(torch.empty(self.hidden_dim, dim, **factory_kwargs))
+        self.Wx = nn.Parameter(torch.empty(self.hidden_dim, dim, **factory_kwargs))
+        self.ba = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
+        self.bx = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
+        self.Lambda = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))  # Λ
+
+    def lecun_init(self):
+        nn.init
+
+    def forward(self, x:Float32[Array, "batch_size, sequence_length, dim"]
+                ) -> Float32[Array, "batch_size, sequence_length, dim"]:
+
+        batch_size, sequence_length = x.shape[:2]
+        ht = torch.zeros(batch_size, self.hidden_dim, dtype=self.dtype, device=self.device)
+        y = []
+        for t in range(sequence_length):
+            xt = x[:, t, :]
+            rt = torch.sigmoid(F.linear(xt, self.Wa, self.ba))  # (1)
+            it = torch.sigmoid(F.linear(xt, self.Wx, self.bx))  # (2)
+
+            # TODO (3)
+            a = torch.sigmoid(self.Lambda)
+            # at = torch.pow(a, self.c*rt)
+
+            # TODO Appendix A
+            log_at = - self.c * F.softplus(self.Lambda, beta=1, threshold=20) * rt
+            at = torch.exp(log_at)
+
+            # TODO https://github.com/kyegomez/Griffin/blob/83bbfdd9b0698cc27c19439ec16fb4fce07436c9/griffin_torch/main.py#L63
+            at = a / torch.pow(self.c, rt) #
+
+            # TODO https://github.com/peytontolbert/Griffin/blob/e526063046108639df15a0306548283aeeda5687/griffin/griffin.py#L199-L207
+
+            
+            ht = at * ht + torch.sqrt(1 - at**2) * (it * xt) # (4)
+            y.append(ht.unsqueeze(1))
+
+        y = torch.cat(y, dim=1)
+
+        return y
+
+
+class RGLRU(Real_Gated_Linear_Recurrent_Unit): ...
 
 
 class Recurrent_block(nn.Module):

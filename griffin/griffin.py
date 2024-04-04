@@ -74,20 +74,15 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
             it = torch.sigmoid(F.linear(xt, self.Wx, self.bx))  # (2)
 
             # TODO (3)
-            a = torch.sigmoid(self.Lambda)
+            # a = torch.sigmoid(self.Lambda)
             # at = torch.pow(a, self.c*rt)
 
-            # TODO Appendix A
-            log_at = - self.c * F.softplus(self.Lambda, beta=1, threshold=20) * rt
+            # TODO Appendix A - https://github.com/kyegomez/Griffin/issues/6
+            log_at = - self.c * F.softplus(-self.Lambda, beta=1, threshold=20) * rt # (6)
             at = torch.exp(log_at)
 
-            # TODO https://github.com/kyegomez/Griffin/blob/83bbfdd9b0698cc27c19439ec16fb4fce07436c9/griffin_torch/main.py#L63
-            at = a / torch.pow(self.c, rt) #
-
-            # TODO https://github.com/peytontolbert/Griffin/blob/e526063046108639df15a0306548283aeeda5687/griffin/griffin.py#L199-L207
-
-            
             ht = at * ht + torch.sqrt(1 - at**2) * (it * xt) # (4)
+
             y.append(ht.unsqueeze(1))
 
         y = torch.cat(y, dim=1)

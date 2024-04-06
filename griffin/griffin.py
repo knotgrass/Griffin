@@ -60,7 +60,9 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
         self.Lambda = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))  # Λ
 
     def lecun_init(self):
-        nn.init
+        # https://tinyurl.com/lecuninit
+        nn.init.normal_(self.Wa, mean=0, std=1 / (self.input_dim ** 0.5))
+        nn.init.normal_(self.Wx, mean=0, std=1 / (self.input_dim ** 0.5))
 
     def forward(self, x:Float32[Array, "batch_size, sequence_length, dim"]
                 ) -> Float32[Array, "batch_size, sequence_length, dim"]:

@@ -58,11 +58,20 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
         self.ba = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
         self.bx = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
         self.Lambda = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))  # Λ
+        self.reset_parameters()
 
-    def lecun_init(self):
+    def reset_parameters(self) -> None:
         # https://tinyurl.com/lecuninit
         nn.init.normal_(self.Wa, mean=0, std=1 / (self.input_dim ** 0.5))
         nn.init.normal_(self.Wx, mean=0, std=1 / (self.input_dim ** 0.5))
+
+        # init bias
+
+        # init Λ
+        nn.init.uniform_(self.Lambda, a=0.9, b=0.999)
+        self.Lambda = - torch.log(
+            (self.Lambda ** (-1./self.c) ) - 1.
+        )
 
     def forward(self, x:Float32[Array, "batch_size, sequence_length, dim"]
                 ) -> Float32[Array, "batch_size, sequence_length, dim"]:

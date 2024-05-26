@@ -73,6 +73,33 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
             (self.Lambda ** (-1./self.c) ) - 1.
         )
 
+    def foresee(self, x:Float32[Array, "batch_size, sequence_length, dim"]
+                ) -> Float32[Array, "batch_size, sequence_length, dim"]:
+
+        batch_size, sequence_length = x.shape[:2]
+        ht = torch.zeros(batch_size, self.hidden_dim,
+                         dtype=self.dtype, device=self.device)
+        y = torch.empty(batch_size, sequence_length, self.hidden_dim,
+                        dtype=self.dtype, device=self.device)
+        for t in range(sequence_length):
+            xt = x[:, t, :]
+            rt = torch.sigmoid(F.linear(xt, self.Wa, self.ba))  # (1)
+            it = torch.sigmoid(F.linear(xt, self.Wx, self.bx))  # (2)
+
+            # TODO (3)
+            # a = torch.sigmoid(self.Lambda)
+            # at = torch.pow(a, self.c*rt)
+
+            # TODO Appendix A - https://github.com/kyegomez/Griffin/issues/6
+            log_at = - self.c * F.softplus(-self.Lambda, beta=1, threshold=20) * rt # (6)
+            at = torch.exp(log_at)
+
+            ht = at * ht + torch.sqrt(1 - at**2) * (it * xt) # (4)
+
+            y[:, t, :] = ht
+
+        return y
+
     def forward(self, x:Float32[Array, "batch_size, sequence_length, dim"]
                 ) -> Float32[Array, "batch_size, sequence_length, dim"]:
 

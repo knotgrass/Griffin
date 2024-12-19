@@ -20,24 +20,39 @@ class Gated_MLP_block(nn.Module):
     def forward(self, x:Tensor) -> Tensor:
         # left branch
         x1 = self.p1(x)
-        x1 = self.gelu(x1, self.approximate)
+        x1 = self.gelu(x1)
 
         # right branch
         x2 = self.p2(x)
 
-        y = x1*x2
+        y = x1 * x2  # element-wise multiplication
         y = self.p3(y)
 
         return y
 
 
 class Temporal_Conv1D(nn.Module):
-    #TODO -
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, D: int, kernel_size: int=4):
+        super().__init__()
+        # A separable 1D convolution:
+        # - Input channels = output channels = D
+        # - groups = D makes it depthwise (channel-wise) convolution.
+        self.conv = nn.Conv1d(
+            in_channels=D,
+            out_channels=D,
+            kernel_size=kernel_size,
+            groups=D,
+            padding=kernel_size // 2  # optional, to preserve sequence length
+        )
 
-    def forward(self, x:Tensor) -> Tensor:
-        return
+    def forward(self, x: Tensor) -> Tensor:
+        # x: (B, T, D)
+        # Transpose to (B, D, T) for Conv1d
+        x = x.transpose(1, 2)
+        x = self.conv(x)  # (B, D, T)
+        # Transpose back to (B, T, D)
+        x = x.transpose(1, 2)
+        return x
 
 
 class Real_Gated_Linear_Recurrent_Unit(nn.Module):
@@ -140,18 +155,23 @@ class Recurrent_block(nn.Module):
         self.gelu = nn.GELU(approximate)
         self.p1 = nn.Linear(in_features=self.D, out_features=D_rnn)
         self.p2 = nn.Linear(in_features=self.D, out_features=D_rnn)
-        self.p3 = nn.Linear(in_features=..., out_features=self.D)
-
+        self.p3 = nn.Linear(in_features=D_rnn, out_features=self.D)
+        self.separableConv1D = Temporal_Conv1D(self.D, kernel_size=4)
+        self.rglru = RGLRU(self.D)
 
     def forward(self, x:Tensor) -> Tensor:
         # left branch
         x1 = self.p1(x)
-        x1 = self.gelu(x1, self.approximate)
+        x1 = self.gelu(x1)
 
         # right branch
         x2 = self.p2(x)
+        x2 = self.separableConv1D(x2)
+        x2 = self.rglru(x2)
 
-        return
+        y = x1 * x2  # element-wise multiplication
+        y = self.p3(y)
+        return y
 
 
 class Residual_block(nn.Module):

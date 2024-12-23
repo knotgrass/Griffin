@@ -185,11 +185,11 @@ class Residual_block(nn.Module):
         x1 = self.rmsnorm(x)
         x1 = self.tmb(x1)
 
-        x = x + x1
+        y1 = x + x1
 
-        x2 = self.rmsnorm(x)
+        x2 = self.rmsnorm(y1)
         x2 = self.mlp(x2)
 
-        x = x + x2
+        y2 = y1 + x2
 
-        return x
+        return y2

@@ -7,15 +7,19 @@ from .rmsnorm import RMSNorm
 
 
 class Gated_MLP_block(nn.Module):
-    def __init__(self, input_dim:int, expansion_factor: int=3,
-                 approximate:Literal['none', 'tanh']='none') -> None:
+    def __init__(
+        self,
+        D: int,
+        expansion_factor: int = 3,
+        approximate: Literal["none", "tanh"] = "none",
+    ) -> None:
         super().__init__()
-        self.D = input_dim
+        self.D = D
         self.M = expansion_factor
         self.gelu = nn.GELU(approximate)
-        self.p1 = nn.Linear(in_features=self.D, out_features=self.D*self.M)
-        self.p2 = nn.Linear(in_features=self.D, out_features=self.D*self.M)
-        self.p3 = nn.Linear(in_features=self.D*self.M, out_features=self.D)
+        self.p1 = nn.Linear(in_features=D, out_features=D*self.M)
+        self.p2 = nn.Linear(in_features=D, out_features=D*self.M)
+        self.p3 = nn.Linear(in_features=D*self.M, out_features=D)
 
     def forward(self, x:Tensor) -> Tensor:
         # left branch
@@ -42,10 +46,15 @@ class Temporal_Conv1D(nn.Module):
             out_channels=D,
             kernel_size=kernel_size,
             groups=D,
+            bias=False,
             padding=kernel_size // 2  # optional, to preserve sequence length
         )
 
     def forward(self, x: Tensor) -> Tensor:
+        # https://chatgpt.com/share/67692a55-5224-8005-a271-80067aa3bcbb
+        # B = Batch size
+        # T = Sequence length
+        # D = Feature dimension
         # x: (B, T, D)
         # Transpose to (B, D, T) for Conv1d
         x = x.transpose(1, 2)
@@ -58,18 +67,19 @@ class Temporal_Conv1D(nn.Module):
 class Real_Gated_Linear_Recurrent_Unit(nn.Module):
     c = 8.0
 
-    def __init__(self, dim:int, expansion_factor:int|float=3,
-                 device=None, dtype=None):
+    def __init__(
+        self, D: int, expansion_factor: int | float = 3, device=None, dtype=None
+    ):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
 
         self.dtype = dtype
         self.device = device
-        self.input_dim = dim
-        self.hidden_dim = int(round(dim * expansion_factor))
+        self.D = D
+        self.hidden_dim = int(round(D * expansion_factor))
 
-        self.Wa = nn.Parameter(torch.empty(self.hidden_dim, dim, **factory_kwargs))
-        self.Wx = nn.Parameter(torch.empty(self.hidden_dim, dim, **factory_kwargs))
+        self.Wa = nn.Parameter(torch.empty(self.hidden_dim, D, **factory_kwargs))
+        self.Wx = nn.Parameter(torch.empty(self.hidden_dim, D, **factory_kwargs))
         self.ba = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
         self.bx = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
         self.Lambda = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))  # Λ
@@ -77,8 +87,8 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
 
     def reset_parameters(self) -> None:
         # https://tinyurl.com/lecuninit
-        nn.init.normal_(self.Wa, mean=0, std=1 / (self.input_dim ** 0.5))
-        nn.init.normal_(self.Wx, mean=0, std=1 / (self.input_dim ** 0.5))
+        nn.init.normal_(self.Wa, mean=0, std=1 / (self.D ** 0.5))
+        nn.init.normal_(self.Wx, mean=0, std=1 / (self.D ** 0.5))
 
         # init bias
 
@@ -147,16 +157,16 @@ class RGLRU(Real_Gated_Linear_Recurrent_Unit): ...
 
 
 class Recurrent_block(nn.Module):
-    def __init__(self, input_dim:int, D_rnn:int=...,
+    def __init__(self, D:int, D_rnn:int=...,
                  approximate:Literal['none', 'tanh']='none'):
         super().__init__()
-        self.D = input_dim
+        self.D = D
         self.D_rnn = D_rnn
         self.gelu = nn.GELU(approximate)
-        self.p1 = nn.Linear(in_features=self.D, out_features=D_rnn)
-        self.p2 = nn.Linear(in_features=self.D, out_features=D_rnn)
-        self.p3 = nn.Linear(in_features=D_rnn, out_features=self.D)
-        self.separableConv1D = Temporal_Conv1D(self.D, kernel_size=4)
+        self.p1 = nn.Linear(in_features=D, out_features=D_rnn)
+        self.p2 = nn.Linear(in_features=D, out_features=D_rnn)
+        self.p3 = nn.Linear(in_features=D_rnn, out_features=D)
+        self.separableConv1D = Temporal_Conv1D(D, kernel_size=4)
         self.rglru = RGLRU(self.D)
 
     def forward(self, x:Tensor) -> Tensor:
@@ -175,11 +185,11 @@ class Recurrent_block(nn.Module):
 
 
 class Residual_block(nn.Module):
-    def __init__(self, input_dim:int):
+    def __init__(self, D:int):
         super().__init__()
-        self.mlp = Gated_MLP_block(input_dim, expansion_factor=3)
-        self.tmb = Recurrent_block(input_dim, D_rnn=...)
-        self.rmsnorm = RMSNorm(d=input_dim) # ?
+        self.mlp = Gated_MLP_block(D, expansion_factor=3)
+        self.tmb = Recurrent_block(D, D_rnn=int(4*D/3))
+        self.rmsnorm = RMSNorm(d=D) # ?
 
     def forward(self, x:Tensor) -> Tensor:
         x1 = self.rmsnorm(x)

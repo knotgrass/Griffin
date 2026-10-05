@@ -92,6 +92,9 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
         nn.init.normal_(self.Wx, mean=0, std=1 / (self.D ** 0.5))
 
         # init bias
+        # https://github.com/google-deepmind/recurrentgemma/blob/2efa84dac0e68e63547a27a18fa943c98f1c312e/recurrentgemma/torch/layers.py#L117-L120
+        nn.init.zeros_(self.ba)
+        nn.init.zeros_(self.bx)
 
         # init Λ
         nn.init.uniform_(self.Lambda, a=0.9, b=0.999)

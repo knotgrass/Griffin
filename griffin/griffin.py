@@ -98,9 +98,8 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
 
         # init Λ
         nn.init.uniform_(self.Lambda, a=0.9, b=0.999)
-        self.Lambda = - torch.log(
-            (self.Lambda ** (-1./self.c) ) - 1.
-        )
+        with torch.no_grad():
+            self.Lambda.copy_(-torch.log(self.Lambda ** (-1. / self.c) - 1.))
 
     def foresee(self, x:Float32[Tensor, "batch_size sequence_length dim"]
                 ) -> Float32[Tensor, "batch_size sequence_length dim"]:

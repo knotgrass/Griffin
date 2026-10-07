@@ -72,8 +72,6 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
 
-        self.dtype = dtype
-        self.device = device
         self.D = D
 
         # (4) is element-wise: h_t, i_t and x_t have the same width
@@ -103,10 +101,8 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
                 ) -> Float32[Tensor, "batch_size sequence_length dim"]:
 
         batch_size, sequence_length = x.shape[:2]
-        ht = torch.zeros(batch_size, self.D,
-                         dtype=self.dtype, device=self.device)
-        y = torch.empty(batch_size, sequence_length, self.D,
-                        dtype=self.dtype, device=self.device)
+        ht = x.new_zeros(batch_size, self.D)  # (batch_size, D)
+        y = torch.empty_like(x)  # (batch_size, sequence_length, D)
         for t in range(sequence_length):
             xt = x[:, t, :]
             rt = torch.sigmoid(F.linear(xt, self.Wa, self.ba))  # (1)
@@ -130,7 +126,7 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
                 ) -> Float32[Tensor, "batch_size sequence_length dim"]:
 
         batch_size, sequence_length = x.shape[:2]
-        ht = torch.zeros(batch_size, self.D, dtype=self.dtype, device=self.device)
+        ht = x.new_zeros(batch_size, self.D)  # (batch_size, D)
         y = []
         for t in range(sequence_length):
             xt = x[:, t, :]

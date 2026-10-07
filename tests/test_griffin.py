@@ -21,7 +21,7 @@ def test_causal():
 
 
 def test_residual_block():
-    """Residual_block runs with D_rnn != D and keeps the fixes of C3-C8 and S1-S3."""
+    """Residual_block runs with D_rnn != D and keeps the fixes of C3-C9 and S1-S3."""
     torch.manual_seed(0)
     B, T, D = 2, 10, 6  # D_rnn = 8 != D, so a D / D_rnn mix-up fails
     blk = Residual_block(D)
@@ -53,3 +53,10 @@ def test_residual_block():
     y.sum().backward()
     for name, p in blk.named_parameters():
         assert p.grad is not None and torch.isfinite(p.grad).all(), name
+
+    # C9: h_0 follows the dtype and the device of x
+    blk_bf16 = Residual_block(D).to(torch.bfloat16)
+    assert blk_bf16(x.detach().to(torch.bfloat16)).dtype == torch.bfloat16
+    # the meta device holds no data, so it checks the device without a GPU
+    blk_meta = Residual_block(D).to("meta")
+    assert blk_meta(x.detach().to("meta")).device.type == "meta"

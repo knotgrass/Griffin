@@ -160,9 +160,10 @@ class RGLRU(Real_Gated_Linear_Recurrent_Unit): ...
 
 
 class Recurrent_block(nn.Module):
-    def __init__(self, D:int, D_rnn:int=...,
+    def __init__(self, D:int, D_rnn:int | None = None,
                  approximate:Literal['none', 'tanh']='none'):
         super().__init__()
+        D_rnn = D_rnn or int(round(4 * D / 3))
         self.D = D
         self.D_rnn = D_rnn
         self.gelu = nn.GELU(approximate)
@@ -190,10 +191,10 @@ class Recurrent_block(nn.Module):
 class Residual_block(nn.Module):
     def __init__(self, D:int):
         super().__init__()
-        self.mlp = Gated_MLP_block(D, expansion_factor=3)
-        self.tmb = Recurrent_block(D, D_rnn=int(4*D/3))
         self.tmb_norm = RMSNorm(d=D)
+        self.tmb = Recurrent_block(D, D_rnn=int(round(4 * D / 3)))
         self.mlp_norm = RMSNorm(d=D)
+        self.mlp = Gated_MLP_block(D, expansion_factor=3)
 
     def forward(self, x:Tensor) -> Tensor:
         x1 = self.tmb_norm(x)

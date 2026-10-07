@@ -169,7 +169,7 @@ class Recurrent_block(nn.Module):
         self.p1 = nn.Linear(in_features=D, out_features=D_rnn)
         self.p2 = nn.Linear(in_features=D, out_features=D_rnn)
         self.p3 = nn.Linear(in_features=D_rnn, out_features=D)
-        self.separableConv1D = Temporal_Conv1D(D, kernel_size=4)
+        self.separableConv1D = Temporal_Conv1D(D_rnn, kernel_size=4)
         self.rglru = RGLRU(self.D)
 
     def forward(self, x:Tensor) -> Tensor:

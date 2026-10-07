@@ -1,4 +1,4 @@
-# Python >= 3.10 (int | float in type hints)
+# Python >= 3.10 (int | None in type hints)
 torch>=1.12  # nn.GELU(approximate=...)
 jaxtyping
 pytest>=7.0  # pythonpath option in pyproject.toml

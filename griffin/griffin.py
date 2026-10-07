@@ -68,22 +68,20 @@ class Temporal_Conv1D(nn.Module):
 class Real_Gated_Linear_Recurrent_Unit(nn.Module):
     c = 8.0
 
-    def __init__(
-        self, D: int, expansion_factor: int | float = 3, device=None, dtype=None
-    ):
+    def __init__(self, D: int, device=None, dtype=None):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
 
         self.dtype = dtype
         self.device = device
         self.D = D
-        self.hidden_dim = int(round(D * expansion_factor))
 
-        self.Wa = nn.Parameter(torch.empty(self.hidden_dim, D, **factory_kwargs))
-        self.Wx = nn.Parameter(torch.empty(self.hidden_dim, D, **factory_kwargs))
-        self.ba = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
-        self.bx = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))
-        self.Lambda = nn.Parameter(torch.empty(self.hidden_dim, **factory_kwargs))  # Λ
+        # (4) is element-wise: h_t, i_t and x_t have the same width
+        self.Wa = nn.Parameter(torch.empty(D, D, **factory_kwargs))
+        self.Wx = nn.Parameter(torch.empty(D, D, **factory_kwargs))
+        self.ba = nn.Parameter(torch.empty(D, **factory_kwargs))
+        self.bx = nn.Parameter(torch.empty(D, **factory_kwargs))
+        self.Lambda = nn.Parameter(torch.empty(D, **factory_kwargs))  # Λ
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -105,9 +103,9 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
                 ) -> Float32[Tensor, "batch_size sequence_length dim"]:
 
         batch_size, sequence_length = x.shape[:2]
-        ht = torch.zeros(batch_size, self.hidden_dim,
+        ht = torch.zeros(batch_size, self.D,
                          dtype=self.dtype, device=self.device)
-        y = torch.empty(batch_size, sequence_length, self.hidden_dim,
+        y = torch.empty(batch_size, sequence_length, self.D,
                         dtype=self.dtype, device=self.device)
         for t in range(sequence_length):
             xt = x[:, t, :]
@@ -132,7 +130,7 @@ class Real_Gated_Linear_Recurrent_Unit(nn.Module):
                 ) -> Float32[Tensor, "batch_size sequence_length dim"]:
 
         batch_size, sequence_length = x.shape[:2]
-        ht = torch.zeros(batch_size, self.hidden_dim, dtype=self.dtype, device=self.device)
+        ht = torch.zeros(batch_size, self.D, dtype=self.dtype, device=self.device)
         y = []
         for t in range(sequence_length):
             xt = x[:, t, :]
@@ -171,7 +169,7 @@ class Recurrent_block(nn.Module):
         self.p2 = nn.Linear(in_features=D, out_features=D_rnn)
         self.p3 = nn.Linear(in_features=D_rnn, out_features=D)
         self.separableConv1D = Temporal_Conv1D(D_rnn, kernel_size=4)
-        self.rglru = RGLRU(self.D)
+        self.rglru = RGLRU(D_rnn)
 
     def forward(self, x:Tensor) -> Tensor:
         # left branch
